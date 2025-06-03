@@ -75,8 +75,11 @@ db = None
 @app.on_event("startup")
 async def startup_event():
     global client, db
+    from dotenv import load_dotenv
+    load_dotenv()
     client = AsyncIOMotorClient(os.getenv("MONGO_URL"))
-    db = client[os.getenv("DB_NAME")]
+    db_name = os.getenv("DB_NAME", "linkedin_job_bot")
+    db = client[db_name]
 
 @app.on_event("shutdown")
 async def shutdown_event():
