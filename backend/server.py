@@ -78,7 +78,9 @@ async def startup_event():
     from dotenv import load_dotenv
     load_dotenv()
     client = AsyncIOMotorClient(os.getenv("MONGO_URL"))
-    db_name = os.getenv("DB_NAME", "linkedin_job_bot")
+    db_name = os.getenv("DB_NAME")
+    if not db_name:
+        db_name = "linkedin_job_bot"
     db = client[db_name]
 
 @app.on_event("shutdown")
