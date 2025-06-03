@@ -363,10 +363,13 @@ async def upload_cv(file: UploadFile = File(...)):
     try:
         # Read PDF content
         content = await file.read()
-        pdf_file = io.BytesIO(content)
         
         # Extract text
-        extracted_text = extract_text_from_pdf(pdf_file)
+        extracted_text = extract_text_from_pdf(content)
+        
+        # Validate extracted text
+        if not extracted_text or len(extracted_text.strip()) < 10:
+            raise HTTPException(status_code=400, detail="Could not extract sufficient text from PDF. Please ensure the PDF contains readable text.")
         
         # Analyze with AI
         analysis = await analyze_cv_with_ai(extracted_text)
@@ -397,6 +400,8 @@ async def upload_cv(file: UploadFile = File(...)):
             }
         }
     
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing CV: {str(e)}")
 
