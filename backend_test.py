@@ -61,8 +61,58 @@ class LinkedInJobBotTester:
         )
         return success
     
+    def test_upload_cv(self):
+        """Test CV upload functionality with a test CV file"""
+        # Create a test CV file if it doesn't exist
+        test_cv_path = "/app/test_cv.txt"
+        if not os.path.exists(test_cv_path):
+            with open(test_cv_path, "w") as f:
+                f.write("""John Doe
+Software Developer
+john.doe@example.com
+
+SKILLS
+Python, JavaScript, React, FastAPI, MongoDB, Docker, AWS
+
+EXPERIENCE
+Senior Software Developer at TechCorp (2020-2023)
+- Developed and maintained web applications using React and Node.js
+- Implemented CI/CD pipelines using GitHub Actions
+
+Software Engineer at StartupXYZ (2018-2020)
+- Built RESTful APIs using Python and FastAPI
+- Worked with MongoDB and PostgreSQL databases
+
+EDUCATION
+Bachelor of Computer Science, University of Technology (2018)
+""")
+        
+        # Convert text file to PDF-like bytes for testing
+        with open(test_cv_path, "rb") as f:
+            test_cv_content = f.read()
+        
+        # Create a mock PDF file for testing
+        files = {
+            'file': ('test_cv.pdf', test_cv_content, 'application/pdf')
+        }
+        
+        success, response = self.run_test(
+            "CV Upload",
+            "POST",
+            "upload-cv",
+            200,
+            files=files
+        )
+        
+        if success and 'cv_id' in response:
+            self.cv_id = response['cv_id']
+            print(f"CV uploaded successfully with ID: {self.cv_id}")
+            print(f"Skills extracted: {response.get('analysis', {}).get('skills', [])}")
+            return True
+        return False
+    
     def test_search_jobs(self):
-        """Test job search functionality without CV upload"""
+        """Test job search functionality"""
         data = {
             "keywords": "Python Developer",
             "location": "Remote",
@@ -96,11 +146,62 @@ class LinkedInJobBotTester:
         
         if success and 'jobs' in response:
             print(f"Retrieved {len(response['jobs'])} jobs")
+            if not self.job_id and response.get('jobs') and len(response['jobs']) > 0:
+                self.job_id = response['jobs'][0]['id']
+                print(f"Selected job ID: {self.job_id}")
+            return True
+        return False
+    
+    def test_apply_to_job(self):
+        """Test applying to a job"""
+        if not self.job_id:
+            print("❌ No job ID available for application test")
+            return False
+        
+        success, response = self.run_test(
+            "Apply to Job",
+            "POST",
+            f"apply-job/{self.job_id}",
+            200
+        )
+        
+        if success and 'application_id' in response:
+            self.application_id = response['application_id']
+            print(f"Applied to job successfully with application ID: {self.application_id}")
+            print(f"Cover letter generated with {len(response.get('cover_letter', ''))} characters")
+            return True
+        return False
+    
+    def test_get_applications(self):
+        """Test retrieving applications"""
+        success, response = self.run_test(
+            "Get Applications",
+            "GET",
+            "applications",
+            200
+        )
+        
+        if success and 'applications' in response:
+            print(f"Retrieved {len(response['applications'])} applications")
+            return True
+        return False
+    
+    def test_auto_apply(self):
+        """Test auto-apply functionality"""
+        success, response = self.run_test(
+            "Auto Apply",
+            "POST",
+            "auto-apply?min_match_score=50&max_applications=3",
+            200
+        )
+        
+        if success:
+            print(f"Auto-apply result: {response.get('message', 'No message')}")
             return True
         return False
 
 def main():
-    # Get the backend URL from environment or use the one from frontend/.env
+    # Get the backend URL from frontend/.env
     backend_url = "https://c7b12ba2-6d55-4b37-8b6d-8bddb20c2307.preview.emergentagent.com"
     
     print(f"🚀 Testing LinkedIn Job Bot API at {backend_url}")
@@ -113,11 +214,23 @@ def main():
         print("❌ Health check failed, stopping tests")
         return 1
     
-    # Test job search (this might fail if CV upload is required)
+    # Test CV upload
+    tester.test_upload_cv()
+    
+    # Test job search
     tester.test_search_jobs()
     
     # Test getting jobs
     tester.test_get_jobs()
+    
+    # Test applying to a job
+    tester.test_apply_to_job()
+    
+    # Test getting applications
+    tester.test_get_applications()
+    
+    # Test auto-apply
+    tester.test_auto_apply()
     
     # Print results
     print(f"\n📊 Tests passed: {tester.tests_passed}/{tester.tests_run}")
