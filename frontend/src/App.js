@@ -34,7 +34,7 @@ function App() {
       const response = await axios.post(`${API_URL}/api/upload-cv`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      setCvData response.data.analysis);
+      setCvData(response.data.analysis);
       alert('CV uploaded and analyzed successfully!');
     } catch (error) {
       alert('Error uploading CV: ' + (error.response?.data?.detail || error.message));
